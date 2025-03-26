@@ -55,30 +55,20 @@ MSB Opcode(4 bits), RegA (3 bits), value (25 bits), LSB
 ----------
 
 ## Architecture:
-The program mimics the design of a CPU. The program consists of a memory class, an arithmetic 
-class, and a program class. The driver cfile (um.c) loads the initial program 
-into memory, initializes general memory, and begins the process loop. 
+- **Registers and Program Counter:**  
+  There are 8 general-purpose 32-bit registers that hold data and computation results. A 32-bit program counter (PC) points to the current instruction in segment 0 (the program segment) and is updated after each fetch.
 
-The memory class consists of several functions that pertain to general memory.
-It allows the user to allocate memory, deallocate memory, get memory and free
-memory. Under the hood this system allows the user to allocate memory into 
-a growing Hanson sequence. The Hanson sequence stores arrays of varying 
-lengths (segments) with their size stored alongside. When allocating memory 
-the user is given an address which pertains to the index of that segment. 
-This abstraction hides the address system and general memory system.
+- **Memory Model:**  
+  Memory is dynamically managed as a collection of segments (arrays of 32-bit words). Segment 0 is initially loaded with the program instructions, while other segments can be mapped (allocated) and unmapped (deallocated) on demand. A memory module handles allocation, initialization, and reuse of segments using internal data structures like sequences and stacks.
 
-The arithmetic class is restrained to a single function which then executes 
-all other functions. Aptly named “execute”, this function takes in pointers 
-to the registers used, the opcode of the command, and a value in the case of 
-the load value command. This abstraction hides all of the code behind each 
-instruction and what the instructions are.
+- **Instruction Format and Execution:**  
+  Instructions come in two main formats: a three-register format for most operations (such as conditional move, segmented load/store, arithmetic operations, bitwise NAND, I/O, and program load) and a load value format for directly setting a register. Bit-level operations (using bitpack utilities) are used to encode and decode these instructions from 32-bit words. During execution, the CPU fetches an instruction from segment 0, decodes it to determine the opcode and register operands, and then dispatches it to the corresponding function (found in modules like the arithmetic and instructions files).
 
-The CPU class holds the registers, the program counter, and the process loop.
-Before a loop is run the program counter is checked to be a valid number. 
-On each iteration of this loop the general memory is queried for the next 
-command to run. The command is decoded within the CPU, and then sent to the 
-execute function within the arithmetic class. Depending on the function, 
-arithmetic class may augment general memory or the program counter. At the 
-end of the loop the program counter is incremented. At the end of the process,
-all general memory is freed.
+- **Fetch-Decode-Execute Cycle:**  
+  The main loop (in the CPU module) continually fetches instructions from segment 0 using the program counter, decodes them (extracting opcodes and operand fields), and executes them by invoking the appropriate operation function. The cycle terminates when a halt instruction is executed or an error condition occurs (e.g., an invalid memory access or instruction).
 
+- **I/O Handling:**  
+  Input and output instructions work with 8-bit ASCII characters, ensuring that I/O values are within the allowed range, with the output function asserting values do not exceed 255.
+
+- **Test and Build Infrastructure:**  
+  The architecture includes a set of helper functions to construct instruction sequences (in the instructions and write_instructions_file modules) that serve both as test cases and demonstrations of the emulator’s capabilities.
